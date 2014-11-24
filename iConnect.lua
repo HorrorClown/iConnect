@@ -5,13 +5,14 @@
 -- License: MIT/X11
 -- pewx.de // iGaming-mta.de // iRace-mta.de // iSurvival.de // mtasa.de
 --
-wfc = {}
-wfc.__index = wcf
+wcf = {}
+wcf.__index = wcf
 
 function wcf:connect(host, username, password, database)
 	local c = {}
 	c.hCon = dbConnect("mysql", ("dbname=%s;host=%s"):format(database, host), username, password, "autoreconnect=1")
-	return setmetatable(c, wcf)
+    setmetatable(c, wcf)
+    return c
 end
 
 function wcf:disconnect()
