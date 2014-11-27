@@ -31,7 +31,7 @@ end
 function Cwbbc:getUserName(sUID)
     if not self.hCon then self:message("Not connected to mysql server!") return false end
     assert((type(sUID) == "number" or type(sUID) == "string"), "Invalid number/string @ argument 1")
-    return mysql.get("wcf1_user", "username", "userID", sUID)
+    return self:get("wcf1_user", "username", "userID", sUID)
 end
 
 function Cwbbc:query(q, ...)
