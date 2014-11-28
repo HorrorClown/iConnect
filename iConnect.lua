@@ -8,11 +8,14 @@
 Cwbbc = {}
 
 function Cwbbc:constructor(sHost, sUser, sPass, sDBName, sPort)
+    self.sHost = sHost
+    self.sUser = sUser
+    self.sDBname = sDBName
     self.hCon = dbConnect("mysql", ("dbname=%s;host=%s;port=%s"):format(sDBName, sHost, sPort), sUser, sPass, "autoreconnect=1")
     if self.hCon then
-        outputDebugString("|wbbc| Connected to mysql server!")
+        self:message("Successfully connected!")
     else
-        outputDebugString("|wbbc| Can't connect to  mysql server!")
+        self:message("Can't connect to mysql server!")
         stopResource(getThisResource())
     end
 end
@@ -22,17 +25,133 @@ function Cwbbc:destructor()
     self.hCon = ni
 end
 
+--//Woltlab Community Framework
+
+function Cwbbc:comparePassword(sUsername, sPW)
+	if not self.hCon then self:message("Not connected to mysql server") return false end
+	assert(type(sUsername) == "string", "Invalid string @ argument 1")
+	assert(type(sUsername, sPW) == "string", "Invalid string @ argument 2")
+	if self:get("wcf1_user", "username", "username", sUsername) then
+		local dbHash = self:get("wcf1_user", "password", "username", sUsername)
+		local pwHash = getDoubleSaltedHash(dbHash, sUsername, sPW)
+		return (dbHash == pwHash)
+	end
+	return false
+end
+
 function Cwbbc:getUserID(sUsername)
     if not self.hCon then self:message("Not connected to mysql server!") return false end
     assert(type(sUsername) == "string", "Invalid string @ argument 1")
-    return self:get("wcf1_user", "userID", "username", sUsername)
+    return tonumber(self:get("wcf1_user", "userID", "username", sUsername))
 end
 
-function Cwbbc:getUserName(sUID)
+function Cwbbc:getUserName(nUID)
     if not self.hCon then self:message("Not connected to mysql server!") return false end
-    assert((type(sUID) == "number" or type(sUID) == "string"), "Invalid number/string @ argument 1")
-    return self:get("wcf1_user", "username", "userID", sUID)
+    assert((type(nUID) == "number"), "Invalid number @ argument 1")
+    return self:get("wcf1_user", "username", "userID", nUID)
 end
+
+function Cwbbc:getUserTitle(nUID)
+	if not self.hCon then self:message("Not connected to mysql server") return false end
+	assert(type(nUID) == "number", "Invalid number @ argument 1")
+	return self:get("wcf1_user", "userTitle", "userID", nUID)
+end
+
+function Cwbbc:setUserTitle(nUID, sTitle)
+	if not self:hCon then self:message("Not connected to mysql server") return false end
+	assert(type(nUID) == "number", "Invalid number @ argument 1")
+	assert(type(sTitle) == "string", "Invalid string @ argument 2")
+	return self:set("wcf1_user", "userTitle", sTitle, "userID", nUID)
+end
+
+function Cwbbc:isUserActivated(nUID)
+	if not self:hCon then self:message("Not connected to mysql server") return false end
+	assert(type(nUID) == "number", "Invalid number @ argument 1")
+	return (self:get("wcf1_user", "activationCode", "userID", nUID) == 0)
+end
+
+function Cwbbc:getUserLanguageID(nUID)
+	if not self:hCon then self:message("Not connected to mysql server") return false end
+	assert(type(nUID) == "number", "Invalid number @ argument 1")
+	return tonumber(self:get("wcf1_user", "languageID", "userID", nUID))
+end
+
+function Cwbbc:setUserLanguageID(nUID, nLanguageID)
+	if not self:hCon then self:message("Not connected to mysql server") return false end
+	assert(type(nUID) == "number", "Invalid number @ argument 1")
+	assert(type(nLanguageID) == "number", "Invalid number @ argument 2")
+	return self:set("wcf1_user", "languageID", nLanguageID, "userID", nUID)
+end
+
+function Cwbbc:getLanguageItemText(sLanguageItem, nLanguageID)
+	if not self:hCon then self:message("Not connected to mysql server") return false end
+	assert(type(sLanguageItem) == "string", "Invalid string @ argument 1")
+	assert(type(nLanguageID) == "number", "Invalid number @ argument 2")
+	return self:get("wcf1_language_item", "languageItemValue", "languageItem", sLanguageItem, "languageID", nLanguageID) or false
+end
+
+--//Woltlab Burning Board
+
+function Cwbbc:getBoardTitle(nBoardID)
+	if not self:hCon then self:message("Not connected to mysql server") return false end
+	assert(type(nBoardID) == "number", "Invalid number @ argument 1")
+	return self:get("wbb1_board", "title", "boardID", nBoardID) or false
+end
+
+function Cwbbc:getBoardID(sTitle, nBoardType)
+	if not self:hCon then self:message("Not connected to mysql server") return false end
+	assert(type(sTitle) == "string", "Invalid string @ argument 1")
+	assert(type(nBoardType) == "number", "Invalid number @ argument 2")
+	return tonumber(mysql.get("wbb1_board", "boardID", "title", sTitle, "boardType", nBoardType))
+end
+
+function Cwbbc:addThread(nUID, nBoardID, sTitle, sText)
+	if not self:hCon then self:message("Not connected to mysql server") return false end
+	assert(type(nUID) == "number", "Invalid number @ argument 1")
+	assert(type(nBoardID) == "number", "Invalid number @ argument 2")
+	assert(type(sTitle) == "string", "Invalid string @ argument 3")
+	assert(type(sText) == "string", "Invalid string @ argument 4")
+	local username = wcf.getUsername(nUID)
+	local timestamp = getRealTime().timestamp
+	local result, _, threadID = self:query("INSERT INTO wbb1_thread (boardID, topic, userID, lastPosterID, username, lastPoster, time, lastPostTime) VALUES (?,?,?,?,?,?,?,?)", nBoardID, sTitle, nUID, nUID, username, username, timestamp, timestamp)
+	if result then
+		local result, _, postID = self:query("INSERT INTO wbb1_post (threadID, userID, username, subject, message, time) VALUES (?,?,?,?,?,?)", threadID, nUID, username, sTitle, sText, timestamp)
+		if result then
+			self:set("wbb1_thread", "firstPostID", postID, "threadID", threadID)
+			self:set("wbb1_thread", "lastPostID", postID, "threadID", threadID)
+			return threadID
+		end
+	end
+end
+
+function Cwbbc:addPost(nUID, nThreadID, sSubject, sText)
+	if not self:hCon then self:message("Not connected to mysql server") return false end
+	assert(type(nUID) == "number", "Invalid number @ argument 1")
+	assert(type(nThreadID) == "number", "Invalid number @ argument 2")
+	assert(type(sSubject) == "string", "Invalid string @ argument 3")
+	assert(type(sText) == "string", "Invalid string @ argument 4")
+	local username = wcf.getUsername(nUID)
+	local timestamp = getRealTime().timestamp
+	local result, _, postID = self:query("INSERT INTO wbb1_post (threadID, userID, username, subject, message, time) VALUES (?,?,?,?,?,?)", nThreadID, nUID, username, sSubject, sText, timestamp)
+	if result then
+		local replies = tonumber(self:get("wbb1_thread", "replies", "threadID", nThreadID))
+		return (self:set("wbb1_thread", "lastPostID", postID, "threadID", nThreadID) and self:set("wbb1_thread", "lastPostTime", timestamp, "threadID", nThreadID) and self:set("wbb1_thread", "replies", replies + 1, "threadID", nThreadID))
+	end
+end
+
+--//Useful
+
+function Cwbbc:message(sMessage)
+	outputDebugString(("[%s:%s@%s]: %s"):format(self:sUser, self.sHost, self.sPort, self.sDBName, sMessage), 0, 255, 0, 255)
+end
+
+function getDoubleSaltedHash(sDBHash, sPW)
+	local salt = string.sub(sDBHash, 1, 29)
+	local hash = string.sub(bcrypt_digest(bcrypt_digest(sPW, salt), salt), 1, 60)
+	return hash
+end
+
+--//Database
 
 function Cwbbc:query(q, ...)
     local query = dbQuery(self.hCon, q, ...)
