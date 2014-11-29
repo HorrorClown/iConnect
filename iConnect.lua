@@ -58,33 +58,33 @@ function Cwbbc:getUserTitle(nUID)
 end
 
 function Cwbbc:setUserTitle(nUID, sTitle)
-	if not self:hCon then self:message("Not connected to mysql server") return false end
+	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nUID) == "number", "Invalid number @ argument 1")
 	assert(type(sTitle) == "string", "Invalid string @ argument 2")
 	return self:set("wcf1_user", "userTitle", sTitle, "userID", nUID)
 end
 
 function Cwbbc:isUserActivated(nUID)
-	if not self:hCon then self:message("Not connected to mysql server") return false end
+	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nUID) == "number", "Invalid number @ argument 1")
 	return (self:get("wcf1_user", "activationCode", "userID", nUID) == 0)
 end
 
 function Cwbbc:getUserLanguageID(nUID)
-	if not self:hCon then self:message("Not connected to mysql server") return false end
+	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nUID) == "number", "Invalid number @ argument 1")
 	return tonumber(self:get("wcf1_user", "languageID", "userID", nUID))
 end
 
 function Cwbbc:setUserLanguageID(nUID, nLanguageID)
-	if not self:hCon then self:message("Not connected to mysql server") return false end
+	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nUID) == "number", "Invalid number @ argument 1")
 	assert(type(nLanguageID) == "number", "Invalid number @ argument 2")
 	return self:set("wcf1_user", "languageID", nLanguageID, "userID", nUID)
 end
 
 function Cwbbc:getLanguageItemText(sLanguageItem, nLanguageID)
-	if not self:hCon then self:message("Not connected to mysql server") return false end
+	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(sLanguageItem) == "string", "Invalid string @ argument 1")
 	assert(type(nLanguageID) == "number", "Invalid number @ argument 2")
 	return self:get("wcf1_language_item", "languageItemValue", "languageItem", sLanguageItem, "languageID", nLanguageID) or false
@@ -93,20 +93,20 @@ end
 --//Woltlab Burning Board
 
 function Cwbbc:getBoardTitle(nBoardID)
-	if not self:hCon then self:message("Not connected to mysql server") return false end
+	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nBoardID) == "number", "Invalid number @ argument 1")
 	return self:get("wbb1_board", "title", "boardID", nBoardID) or false
 end
 
 function Cwbbc:getBoardID(sTitle, nBoardType)
-	if not self:hCon then self:message("Not connected to mysql server") return false end
+	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(sTitle) == "string", "Invalid string @ argument 1")
 	assert(type(nBoardType) == "number", "Invalid number @ argument 2")
 	return tonumber(mysql.get("wbb1_board", "boardID", "title", sTitle, "boardType", nBoardType))
 end
 
 function Cwbbc:addThread(nUID, nBoardID, sTitle, sText)
-	if not self:hCon then self:message("Not connected to mysql server") return false end
+	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nUID) == "number", "Invalid number @ argument 1")
 	assert(type(nBoardID) == "number", "Invalid number @ argument 2")
 	assert(type(sTitle) == "string", "Invalid string @ argument 3")
@@ -125,7 +125,7 @@ function Cwbbc:addThread(nUID, nBoardID, sTitle, sText)
 end
 
 function Cwbbc:addPost(nUID, nThreadID, sSubject, sText)
-	if not self:hCon then self:message("Not connected to mysql server") return false end
+	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nUID) == "number", "Invalid number @ argument 1")
 	assert(type(nThreadID) == "number", "Invalid number @ argument 2")
 	assert(type(sSubject) == "string", "Invalid string @ argument 3")
@@ -141,24 +141,24 @@ end
 
 --//Woltlab Community Framework Groups
 function Cwbbc:getGroups()
-    if not self:hCon then self:message("Not connected to mysql server") return false end
+    if not self.hCon then self:message("Not connected to mysql server") return false end
     return self:get("SELECT * FROM wcf1_user_group")
 end
 
 function Cwbbc:getGroupName(nGroupID)
-    if not self:hCon then self:message("Not connected to mysql server") return false end
+    if not self.hCon then self:message("Not connected to mysql server") return false end
     assert(type(nGroupID) == "number", "Invalid number @ argument 1")
     return self:get("wcf1_user_group", "groupName", "groupID", nGroupID)
 end
 
 function Cwbbc:getGroupID(sGroupName)
-    if not self:hCon then self:message("Not connected to mysql server") return false end
+    if not self.hCon then self:message("Not connected to mysql server") return false end
     assert(type(sGroupName) == "string", "Invalid string @ argument 1")
     return self:get("wcf1_user_group", "groupID", "groupName", sGroupName)
 end
 
 function Cwbbc:isGroupExists(snGroup)
-    if not self:hCon then self:message("Not connected to mysql server") return false end
+    if not self.hCon then self:message("Not connected to mysql server") return false end
     assert((type(snGroup) == "number" or type(snGroup) == "string"), "Invalid number/string @ argument 1")
     if type(snGroup) == "string" then
         return (self:get("wcf1_user_group", "groupID", "groupName", snGroup) ~= false) or true
@@ -168,7 +168,7 @@ function Cwbbc:isGroupExists(snGroup)
 end
 
 function Cwbbc:isUserInGroup(nUID, nGroupID)
-    if not self:hCon then self:message("Not connected to mysql server") return false end
+    if not self.hCon then self:message("Not connected to mysql server") return false end
     assert(type(nUID) == "number", "Invalid number @ argument 1")
     assert(type(nGroupID) == "number", "Invalid number @ argument 2")
     local result = self:get("wcf1_user_to_group", "groupID", "userID", nUID)
@@ -179,14 +179,14 @@ function Cwbbc:isUserInGroup(nUID, nGroupID)
 end
 
 function Cwbbc:addUserToGroup(nUID, nGroupID)
-    if not self:hCon then self:message("Not connected to mysql server") return false end
+    if not self.hCon then self:message("Not connected to mysql server") return false end
     assert(type(nUID) == "number", "Invalid number @ argument 1")
     assert(type(nGroupID) == "number", "Invalid number @ argument 2")
     return self:insert("wcf1_user_to_group", "userID, groupID", "?,?", nUID, nGroupID)
 end
 
 function Cwbbc:removeUserFromGroup(nUID, nGroupID)
-    if not self:hCon then self:message("Not connected to mysql server") return false end
+    if not self.hCon then self:message("Not connected to mysql server") return false end
     assert(type(nUID) == "number", "Invalid number @ argument 1")
     assert(type(nGroupID) == "number", "Invalid number @ argument 2")
     return (self:query(("DELETE FROM wcf1_user_to_group WHERE userID = '%s' AND groupID = '%s'"):format(nUID, nGroupID)) ~= false) or true
@@ -195,7 +195,7 @@ end
 --//Useful
 
 function Cwbbc:message(sMessage)
-	outputDebugString(("[%s:%s@%s]: %s"):format(self:sUser, self.sHost, self.sPort, self.sDBName, sMessage), 0, 255, 0, 255)
+	outputDebugString(("[%s:%s@%s]: %s"):format(self.sUser, self.sHost, self.sPort, self.sDBName, sMessage), 0, 255, 0, 255)
 end
 
 function getDoubleSaltedHash(sDBHash, sPW)
