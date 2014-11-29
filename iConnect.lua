@@ -21,8 +21,10 @@ function Cwbbc:constructor(sHost, sUser, sPass, sDBName, sPort)
 end
 
 function Cwbbc:destructor()
+    self.sHost = nil
+    self.sUser = nil
+    self.sDBName = nil
     destroyElement(self.hCon)
-    self.hCon = ni
 end
 
 --//Woltlab Community Framework
