@@ -114,7 +114,7 @@ function Cwbbc:addThread(nUID, nBoardID, sTitle, sText)
 	assert(type(nBoardID) == "number", "Invalid number @ argument 2")
 	assert(type(sTitle) == "string", "Invalid string @ argument 3")
 	assert(type(sText) == "string", "Invalid string @ argument 4")
-	local username = wcf.getUsername(nUID)
+	local username = self:getUserName(nUID)
 	local timestamp = getRealTime().timestamp
 	local result, _, threadID = self:query("INSERT INTO wbb1_thread (boardID, topic, userID, lastPosterID, username, lastPoster, time, lastPostTime) VALUES (?,?,?,?,?,?,?,?)", nBoardID, sTitle, nUID, nUID, username, username, timestamp, timestamp)
 	if result then
@@ -133,19 +133,19 @@ function Cwbbc:addPost(nUID, nThreadID, sSubject, sText)
 	assert(type(nThreadID) == "number", "Invalid number @ argument 2")
 	assert(type(sSubject) == "string", "Invalid string @ argument 3")
 	assert(type(sText) == "string", "Invalid string @ argument 4")
-	local username = wcf.getUsername(nUID)
+	local username = self:getUserName(nUID)
 	local timestamp = getRealTime().timestamp
 	local result, _, postID = self:query("INSERT INTO wbb1_post (threadID, userID, username, subject, message, time) VALUES (?,?,?,?,?,?)", nThreadID, nUID, username, sSubject, sText, timestamp)
 	if result then
 		local replies = tonumber(self:get("wbb1_thread", "replies", "threadID", nThreadID))
-		return (self:set("wbb1_thread", "lastPostID", postID, "threadID", nThreadID) and self:set("wbb1_thread", "lastPostTime", timestamp, "threadID", nThreadID) and self:set("wbb1_thread", "replies", replies + 1, "threadID", nThreadID))
+		return (self:set("wbb1_thread", "lastPostID", postID, "threadID", nThreadID) and self:set("wbb1_thread", "lastPostTime", timestamp, "threadID", nThreadID) and self:set("wbb1_thread", "replies", replies + 1, "threadID", nThreadID)) or false
 	end
 end
 
 --//Woltlab Community Framework Groups
 function Cwbbc:getGroups()
     if not self.hCon then self:message("Not connected to mysql server") return false end
-    return self:get("SELECT * FROM wcf1_user_group")
+    return self:query("SELECT * FROM wcf1_user_group")
 end
 
 function Cwbbc:getGroupName(nGroupID)
@@ -164,9 +164,9 @@ function Cwbbc:isGroupExists(snGroup)
     if not self.hCon then self:message("Not connected to mysql server") return false end
     assert((type(snGroup) == "number" or type(snGroup) == "string"), "Invalid number/string @ argument 1")
     if type(snGroup) == "string" then
-        return (self:get("wcf1_user_group", "groupID", "groupName", snGroup) ~= false) or true
+        return (self:get("wcf1_user_group", "groupID", "groupName", snGroup) ~= nil)
     elseif type(snGroup) == "number" then
-        return (self:get("wcf1_user_group", "groupName", "groupID", snGroup) ~= false) or true
+        return (self:get("wcf1_user_group", "groupName", "groupID", snGroup) ~= nil)
     end
 end
 
@@ -229,7 +229,7 @@ end
 
 function Cwbbc:get(t, c, w, wV, wO, wVO)    --t = table | c = column | w = where | wV = whereValue | wO = whereOpational | wVO = whereValueOptional
     local q, rs
-    if wO and wVO then q, rs = self:query(("SELECT %s FROM %s WHERE %s = '%s' AND %s = '%s'"):format(c, t, w, wV, wO, wVO)) else q, rs = self:query(("SELECT %s FROM %s WHERE %s = '%s'"):format(c, t, w, wV)) end
+    if wO and wVO then q, rs = self:query(("SELECT %s FROM %s WHERE %s = '%s' AND %s = '%s'"):format(c, t, w, wV, wO, wVO)) elseif w and wV then q, rs = self:query(("SELECT %s FROM %s WHERE %s = '%s'"):format(c, t, w, wV)) else q, rs = self:query(("SELECT %s FROM %s"):format(c, t)) end
     if not q then return false end
     if rs > 1 then return q end
 
