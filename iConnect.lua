@@ -139,6 +139,59 @@ function Cwbbc:addPost(nUID, nThreadID, sSubject, sText)
 	end
 end
 
+--//Woltlab Community Framework Groups
+function Cwbbc:getGroups()
+    if not self:hCon then self:message("Not connected to mysql server") return false end
+    return self:get("SELECT * FROM wcf1_user_group")
+end
+
+function Cwbbc:getGroupName(nGroupID)
+    if not self:hCon then self:message("Not connected to mysql server") return false end
+    assert(type(nGroupID) == "number", "Invalid number @ argument 1")
+    return self:get("wcf1_user_group", "groupName", "groupID", nGroupID)
+end
+
+function Cwbbc:getGroupID(sGroupName)
+    if not self:hCon then self:message("Not connected to mysql server") return false end
+    assert(type(sGroupName) == "string", "Invalid string @ argument 1")
+    return self:get("wcf1_user_group", "groupID", "groupName", sGroupName)
+end
+
+function Cwbbc:isGroupExists(snGroup)
+    if not self:hCon then self:message("Not connected to mysql server") return false end
+    assert((type(snGroup) == "number" or type(snGroup) == "string"), "Invalid number/string @ argument 1")
+    if type(snGroup) == "string" then
+        return (self:get("wcf1_user_group", "groupID", "groupName", snGroup) ~= false) or true
+    elseif type(snGroup) == "number" then
+        return (self:get("wcf1_user_group", "groupName", "groupID", snGroup) ~= false) or true
+    end
+end
+
+function Cwbbc:isUserInGroup(nUID, nGroupID)
+    if not self:hCon then self:message("Not connected to mysql server") return false end
+    assert(type(nUID) == "number", "Invalid number @ argument 1")
+    assert(type(nGroupID) == "number", "Invalid number @ argument 2")
+    local result = self:get("wcf1_user_to_group", "groupID", "userID", nUID)
+    for _, g in ipairs(result) do
+        if tonumber(g.groupID) == tonumber(nGroupID) then return true end
+    end
+    return false
+end
+
+function Cwbbc:addUserToGroup(nUID, nGroupID)
+    if not self:hCon then self:message("Not connected to mysql server") return false end
+    assert(type(nUID) == "number", "Invalid number @ argument 1")
+    assert(type(nGroupID) == "number", "Invalid number @ argument 2")
+    return self:insert("wcf1_user_to_group", "userID, groupID", "?,?", nUID, nGroupID)
+end
+
+function Cwbbc:removeUserFromGroup(nUID, nGroupID)
+    if not self:hCon then self:message("Not connected to mysql server") return false end
+    assert(type(nUID) == "number", "Invalid number @ argument 1")
+    assert(type(nGroupID) == "number", "Invalid number @ argument 2")
+    return (self:query(("DELETE FROM wcf1_user_to_group WHERE userID = '%s' AND groupID = '%s'"):format(nUID, nGroupID)) ~= false) or true
+end
+
 --//Useful
 
 function Cwbbc:message(sMessage)
