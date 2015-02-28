@@ -1,5 +1,28 @@
 iConnect
 ========
+
+###UPDATE: 
+Neue Funktionen wurden hinzugefügt!
+
+```lua
+- register (sUsername, sPW, sEmail, nGroupID, nRankID)
+- login (sUsername, sPW) als Alternative zu comparePassword()
+- getConversations(nUID)
+- getConversation(nConversationID)
+- newConversation (nUID, tnRecieverID, sSubject, sMessage)
+- joinConversation (nUID, nConversationID)
+- leaveConversation (nUID, nConversationID)
+- replyConversation(nUID, nConversationID, sMessage, bAutoJoin)
+- setConversationRead (nByUID, nConversationID, isRead)
+- isConversationRead (nByUID, nConversationID)
+- hideConversation (nForUID, nConversationID, toHidden)
+- isConversationHidden (nForUID, nConversationID)
+- isUserInConversation(nUID, nConversationID)
+```
+
+Die Datei **serialize.lua** ist auch neu und wird ebenso benötigt!
+
+
 Da der Woltlab Connector von xthepr0mise (Woltlab-Connector: Verbinde Server und Forum) ausschließlich mit dem Woltlab Burning Board 3 (kurz WBB3) funktioniert, habe ich mich schnell an die Arbeit gemacht und ein neues geschrieben, welches auf WBB4 ausgelegt ist. Dies werde ich für iGaming benötigen und ich denke, dass andere User auch einen Nutzen darin finden könnten.
 
 ###Allgemein
