@@ -31,7 +31,7 @@ Da der Woltlab Connector von xthepr0mise (Woltlab-Connector: Verbinde Server und
 Ihr habt damit die Möglichkeit, euer Server mit eurem WBB4 Forum zu verbinden. Zum Beispiel für eine Login Funktion, die auf die Accounts des Forums zurückgreift. Ebenfalls habt ihr die Möglichkeit neue Threads zu erstellen und Posts hinzu zu fügen. Dies würde die Realisierung eines Support Systems in Verbindung mit dem Forum ermöglichen.
 
 ###Installation
-Einfach die iConnect.lua und die serialize.lua in eure Resource hinzufügen und in die meta.xml als type="server" eintragen. Nicht vergessen *<oop>true</oop>* gehört auch in die meta.xml
+Einfach die iConnect.lua und die serialize.lua in eure Resource hinzufügen und in die meta.xml als type="server" eintragen. Nicht vergessen *&lt;oop&gt;true&lt;/oop&gt;* gehört auch in die meta.xml
 
 #####Wichtig:
 Um den Connector nutzen zu können, benötigt ihr das bcrypt Modul, da dies den Blowfish-Algorithmus zur Verfügung stellt, welcher in MTA leider (noch) nicht enthalten ist.
