@@ -560,4 +560,12 @@ function Cwbbc:get(t, c, w, wV, wO, wVO)    --t = table | c = column | w = where
     end
 end
 
+--//Informations
 
+addEventHandler("onResourceStart", resourceRoot,
+    function()
+        if type(bcrypt_digest) ~= "function" then
+           outputDebugString("[iConnect] bcrypt module required to compare passwords!", 2)
+        end
+    end
+)
