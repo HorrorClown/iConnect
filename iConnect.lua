@@ -1,22 +1,26 @@
 --
--- Launemax
--- www.launemax.at
--- Date: 01.03.2015 - Time: 00:00
+-- HorrorClown (PewX)
+-- Using: IntelliJ IDEA 14 Ultimate
+-- Date: 24.11.2014 - Time: 03:54
 -- License: MIT/X11
--- 
--- Thanks to HorrorClown (PewX) 
 -- pewx.de // iGaming-mta.de // iRace-mta.de // iSurvival.de // mtasa.de
 --
-
+--Contributors:
+--      Launemax <www.launemax.at>
+--
 Cwbbc = {}
 
-function Cwbbc:constructor(sHost, sUser, sPass, sDBName, sPort)
+function Cwbbc:constructor(sHost, sUser, sPass, sDBName, sPort, bDebug)
     self.sHost = sHost
     self.sUser = sUser
     self.sDBName = sDBName
+    self.debug = bDebug or false
     self.hCon = dbConnect("mysql", ("dbname=%s;host=%s;port=%s"):format(sDBName, sHost, sPort), sUser, sPass, "autoreconnect=1")
     if self.hCon then
 		self:query("SET NAMES utf8;")
+        self:message("Successfully connected!")
+        
+        if self.debug then self:debugOutput({Warning = "Debug mode is enabled. Sensitive data (eg passwords) are displayed!"}) end
 	else
         self:message("Can't connect to mysql server!")
         stopResource(getThisResource())
@@ -30,23 +34,36 @@ function Cwbbc:destructor()
     destroyElement(self.hCon)
 end
 
---//Woltlab Community Framework 
 
-function Cwbbc:register(sUsername, sPW, sEmail, nGroupID, nRankID)
+--[[
+    --//
+    --|| Woltlab Community Framework
+    --\\
+ ]]
+
+function Cwbbc:register(sUsername, sPW, sEmail, nGroupID, nRankID, nLanguageID)
 	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(sUsername) == "string", "Invalid string @ argument 1")
 	assert(type(sPW) == "string", "Invalid string @ argument 2")
 	assert(type(sEmail) == "string", "Invalid string @ argument 3")
 	assert(nGroupID == nil or type(nGroupID) == "number", "Invalid number @ argument 4")
 	assert(nRankID == nil or type(nRankID) == "number", "Invalid number @ argument 5")
+	assert(nLanguageID == nil or type(nLanguageID) == "number", "Invalid number @ argument 6")
 	if nGroupID == nil then nGroupID = 1 end
-	if nRankID == nil then nRankID = 1 end
-	local nLanguageID = 1
+    if nRankID == nil then nRankID = 1 end
+    if nLanguageID == nil then nLanguageID = 1 end
 	local nTimestamp = getRealTime().timestamp
-	local dbHash = self:get("wcf1_user", "password", "userID", 1) -- get Reference Hash from User 1
-	sPW = getDoubleSaltedHash(dbHash, sPW)
+
+    --If UserID is available, the username is already in use
+    if self:getUserID(sUsername) then
+        return false
+    end
+
+	local pwHash = self:getDoubleSaltedHash(sPW)
+    self:debugOutput({pwHash = pwHash, isBlowfish = self:isBlowfish()})
+
 	self:query("START TRANSACTION;")
-	local result,_, userID = self:query("INSERT INTO wcf1_user(`username`,`email`,`password`,`languageID`,`registrationDate`, `lastActivityTime`,`rankID`,`userOnlineGroupID`) VALUES (?,?,?,?,?,?,?,?);", sUsername, sEmail, sPW, nLanguageID, nTimestamp, nTimestamp, nRankID, nGroupID)
+	local result, _, userID = self:query("INSERT INTO wcf1_user(`username`,`email`,`password`,`languageID`,`registrationDate`, `lastActivityTime`,`rankID`,`userOnlineGroupID`) VALUES (?,?,?,?,?,?,?,?);", sUsername, sEmail, pwHash, nLanguageID, nTimestamp, nTimestamp, nRankID, nGroupID)
 	if result ~= false then
 		local result = self:query("SELECT `optionID`,`defaultValue` FROM wcf1_user_option;")
 		if result ~= false then
@@ -75,27 +92,27 @@ function Cwbbc:register(sUsername, sPW, sEmail, nGroupID, nRankID)
 	return false
 end
 
-function Cwbbc:comparePassword(sUsername, sPW) return self:login(sUsername, sPW) end
-function Cwbbc:login(sUsername, sPW)
+function Cwbbc:login(sUsername, sPW) return self:comparePassword(sUsername, sPW) end
+function Cwbbc:comparePassword(sUsername, sPW)
 	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(sUsername) == "string", "Invalid string @ argument 1")
 	assert(type(sPW) == "string", "Invalid string @ argument 2")
 	if self:get("wcf1_user", "username", "username", sUsername) then
 		local dbHash = self:get("wcf1_user", "password", "username", sUsername)
-		local pwHash = getDoubleSaltedHash(dbHash, sPW)
-		if (dbHash == pwHash) then
-			return true, Cwbbc:getUserID(sUsername)
-		else
-			return false
-		end
+        local salt = string.sub(dbHash, 1, 29)
+		local pwHash = getDoubleSaltedHash(sPW, salt)
+
+        self:debugOutput({dbHash = dbHash, salt = salt, pwHash = pwHash})
+
+        return (dbHash == pwHash)
 	end
 	return false
 end
 
-function Cwbbc:getUserID(sUsername)
+function Cwbbc:getUserID(sUsername, bMail)
     if not self.hCon then self:message("Not connected to mysql server!") return false end
     assert(type(sUsername) == "string", "Invalid string @ argument 1")
-    local qResult = self:get("wcf1_user", "userID", "username", sUsername)
+    local qResult = bMail and self:get("wcf1_user", "userID", "email", sUsername) or self:get("wcf1_user", "userID", "username", sUsername)
     if qResult ~= nil then return tonumber(qResult) else return false end
 end
 
@@ -103,6 +120,12 @@ function Cwbbc:getUserName(nUID)
     if not self.hCon then self:message("Not connected to mysql server!") return false end
     assert((type(nUID) == "number"), "Invalid number @ argument 1")
     return self:get("wcf1_user", "username", "userID", nUID) or false
+end
+
+function Cwbbc:getUserMail(nUID)
+    if not self.hCon then self:message("Not connected to mysql server!") return false end
+    assert((type(nUID) == "number"), "Invalid number @ argument 1")
+    return self:get("wcf1_user", "email", "userID", nUID) or false
 end
 
 function Cwbbc:getUserTitle(nUID)
@@ -144,7 +167,11 @@ function Cwbbc:getLanguageItemText(sLanguageItem, nLanguageID)
 	return self:get("wcf1_language_item", "languageItemValue", "languageItem", sLanguageItem, "languageID", nLanguageID) or false
 end
 
---//Woltlab Burning Board
+--[[
+    --//
+    --|| Woltlab Burning Board
+    --\\
+ ]]
 
 function Cwbbc:getBoardTitle(nBoardID)
 	if not self.hCon then self:message("Not connected to mysql server") return false end
@@ -193,7 +220,12 @@ function Cwbbc:addPost(nUID, nThreadID, sSubject, sText)
 	end
 end
 
---//Woltlab Community Framework Groups
+--[[
+    --//
+    --|| Woltlab Community Framework - Groups
+    --\\
+ ]]
+
 function Cwbbc:getGroups()
     if not self.hCon then self:message("Not connected to mysql server") return false end
     return self:query("SELECT * FROM wcf1_user_group")
@@ -246,7 +278,11 @@ function Cwbbc:removeUserFromGroup(nUID, nGroupID)
     return (self:query(("DELETE FROM wcf1_user_to_group WHERE userID = '%s' AND groupID = '%s'"):format(nUID, nGroupID)) ~= false) or true
 end
 
---//Conversations
+--[[
+    --//
+    --|| Woltlab Burning Board - Conversations
+    --\\
+ ]]
 
 function Cwbbc:getConversations(nUID) 
 	if not self.hCon then self:message("Not connected to mysql server") return false end
@@ -512,20 +548,77 @@ function Cwbbc:isUserInConversation(nUID, nConversationID)
 	end
 end
 
+--[[
+    --//
+    --|| Hashing functions for Waltlab Community Framework
+    --\\
+ ]]
 
---//Useful
+--Returns true if given hash looks like a valid bcrypt hash
+--Refrence: https://github.com/WoltLab/WCF/blob/master/wcfsetup/install/files/lib/util/PasswordUtil.class.php#L92
+function Cwbbc:isBlowfish(sHash)
+    --Blowfish hashing with a salt as follows: "$2a$", "$2x$" or "$2y$", a two digit cost parameter | Source: http://php.net/manual/en/function.crypt.php
+    return sHash:find("%$2[axy]%$%d%d%$") and true or false
+end
+
+--Returns a double salted bcrypt hash
+--Refrence: https://github.com/WoltLab/WCF/blob/master/wcfsetup/install/files/lib/util/PasswordUtil.class.php#L174
+function Cwbbc:getDoubleSaltedHash(sPassword, sSalt)
+    if sSalt == nil then
+        sSalt = self:getRandomSalt()
+    end
+
+    return getSaltedHash(getSaltedHash(sPassword, sSalt), sSalt)
+end
+
+--Returns a simple salted bcrypt hash
+--Reference: https://github.com/WoltLab/WCF/blob/master/wcfsetup/install/files/lib/util/PasswordUtil.class.php#L189
+function Cwbbc:getSaltedHash(sPassword, sSalt)
+    if sSalt == nil then
+        sSalt = self:getRandomSalt()
+    end
+
+    return bcrypt_digest(sPassword, sSalt)
+end
+
+--Returns a random blowfish compatible salt
+--Reference: https://github.com/WoltLab/WCF/blob/master/wcfsetup/install/files/lib/util/PasswordUtil.class.php#L202
+local blowfishCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./"
+function Cwbbc:getRandomSalt()
+    local salt = ""
+    for i = 1, 22 do
+        local rnd = math.random(1, #blowfishCharacters)
+        salt = ("%s%s"):format(salt, blowfishCharacters:sub(rnd, rnd))
+    end
+
+    self:debugOutput({randomSalt = salt, saltLength = #salt})
+
+    return salt
+end
+
+--[[
+    --//
+    --|| Useful methods
+    --\\
+ ]]
 
 function Cwbbc:message(sMessage)
-	outputDebugString(("[%s:%s@%s]: %s"):format(self.sUser, self.sHost, self.sDBName, sMessage), 0, 255, 0, 255)
+	outputDebugString(("[%s@%s]: %s"):format(self.sUser, self.sDBName, sMessage), 0, 255, 0, 255)
 end
 
-function getDoubleSaltedHash(sDBHash, sPW)
-	local salt = string.sub(sDBHash, 1, 29)
-	local hash = string.sub(bcrypt_digest(bcrypt_digest(sPW, salt), salt), 1, 60)
-	return hash
+function Cwbbc:debugOutput(tMessages)
+    if not self.debug then return end
+
+    for sIndicator, sMessage in pairs(tMessages) do
+       outputChatBox(("[iConnect][%s] %s"):format(tostring(sIndicator), tostring(sMessage)))
+    end
 end
 
---//Database
+--[[
+    --//
+    --|| Database methods (outdated, but still works)
+    --\\
+ ]]
 
 function Cwbbc:query(q, ...)
     local query = dbQuery(self.hCon, q, ...)
@@ -560,12 +653,20 @@ function Cwbbc:get(t, c, w, wV, wO, wVO)    --t = table | c = column | w = where
     end
 end
 
---//Informations
+--[[
+    --//
+    --|| Other informations on resource startup
+    --\\
+ ]]
 
 addEventHandler("onResourceStart", resourceRoot,
     function()
         if type(bcrypt_digest) ~= "function" then
            outputDebugString("[iConnect] bcrypt module required to compare passwords!", 2)
+        end
+
+        if type(unserialize) ~= "function"  or type(serialize) ~= "function" then
+            outputDebugString("[iConnect] unserialize/serialize function required to use conversation methods!", 2)
         end
     end
 )
