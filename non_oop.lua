@@ -27,6 +27,10 @@ function getUserName(nUserID)
 	return wbb:getUserName(nUserID)
 end
 
+function getUserMail(nUserID)
+    return wbb:getUserMail(nUserID)
+end
+
 function getUserTitle(nUserID)
 	return wbb:getUserTitle(nUserID)
 end
