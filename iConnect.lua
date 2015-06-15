@@ -60,7 +60,7 @@ function Cwbbc:register(sUsername, sPW, sEmail, nGroupID, nRankID, nLanguageID)
     end
 
 	local pwHash = self:getDoubleSaltedHash(sPW)
-    self:debugOutput({pwHash = pwHash, isBlowfish = self:isBlowfish()})
+    self:debugOutput({pwHash = pwHash, isBlowfish = self:isBlowfish(pwHash)})
 
 	self:query("START TRANSACTION;")
 	local result, _, userID = self:query("INSERT INTO wcf1_user(`username`,`email`,`password`,`languageID`,`registrationDate`, `lastActivityTime`,`rankID`,`userOnlineGroupID`) VALUES (?,?,?,?,?,?,?,?);", sUsername, sEmail, pwHash, nLanguageID, nTimestamp, nTimestamp, nRankID, nGroupID)
