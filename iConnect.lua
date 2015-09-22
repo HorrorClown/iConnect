@@ -17,11 +17,11 @@ function Cwbbc:constructor(sHost, sUser, sPass, sDBName, sPort, bDebug)
     self.debug = bDebug or false
     self.hCon = dbConnect("mysql", ("dbname=%s;host=%s;port=%s"):format(sDBName, sHost, sPort), sUser, sPass, "autoreconnect=1")
     if self.hCon then
-		self:query("SET NAMES utf8;")
+        self:query("SET NAMES utf8;")
         self:message("Successfully connected!")
-        
+
         if self.debug then self:debugOutput({Warning = "Debug mode is enabled. Sensitive data (eg passwords) are displayed!"}) end
-	else
+    else
         self:message("Can't connect to mysql server!")
         stopResource(getThisResource())
     end
@@ -69,7 +69,7 @@ function Cwbbc:register(sUsername, sPW, sEmail, nGroupID, nRankID, nLanguageID)
 		if result ~= false then
 			local columns = {}
 			local values = {}
-			for _, row in ipairs(result) do 
+			for _, row in ipairs(result) do
 				table.insert(columns, "userOption"..row["optionID"])
 				local v = row["defaultValue"]
 				if v == false then v = "" else v = tostring(v) end
@@ -100,7 +100,7 @@ function Cwbbc:comparePassword(sUsername, sPW)
 	if self:get("wcf1_user", "username", "username", sUsername) then
 		local dbHash = self:get("wcf1_user", "password", "username", sUsername)
         local salt = string.sub(dbHash, 1, 29)
-		local pwHash = getDoubleSaltedHash(sPW, salt)
+        local pwHash = self:getDoubleSaltedHash(sPW, salt)
 
         self:debugOutput({dbHash = dbHash, salt = salt, pwHash = pwHash})
 
@@ -284,13 +284,13 @@ end
     --\\
  ]]
 
-function Cwbbc:getConversations(nUID) 
+function Cwbbc:getConversations(nUID)
 	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nUID) == "number", "Invalid number @ argument 1")
 	local result = self:query("SELECT c.conversationID, subject, c.userID, c.username, participantSummary, FROM_UNIXTIME(time) as time, ct.hideConversation as state FROM wcf1_conversation c LEFT JOIN wcf1_conversation_to_user ct ON ct.conversationID = c.conversationID AND ct.participantID = ? WHERE (userid = ? OR participantSummary LIKE '%s:6:\"userID\";s:?:\"?\"%') AND ct.hideConversation != 2 ORDER BY time", nUID, nUID, string.len(tostring(nUID)), nUID)
 	if result then
 		local conversations = {}
-		for _, conv in ipairs(result) do 
+        for _, conv in ipairs(result) do
 			local conversation = {}
 			conversation["ID"] = tonumber(conv["conversationID"])
 			conversation["subject"] = conv["subject"]
@@ -307,7 +307,7 @@ function Cwbbc:getConversations(nUID)
 			end
 			local _participants = unserialize(conv["participantSummary"])
 			conversation["participants"] = {}
-			for _, participant in pairs(_participants) do 
+			for _, participant in pairs(_participants) do
 				conversation["participants"][tonumber(participant["userID"])] = participant["username"]
 			end
 			if conversation["participants"][nUID] == nil then
@@ -321,7 +321,7 @@ function Cwbbc:getConversations(nUID)
 	end
 end
 
-function Cwbbc:getConversation(nConversationID) 
+function Cwbbc:getConversation(nConversationID)
 	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nConversationID) == "number", "Invalid number @ argument 1")
 	local result, _ = self:query("SELECT subject, userID, username, participantSummary FROM wcf1_conversation WHERE conversationID = ?", nConversationID)
@@ -333,12 +333,12 @@ function Cwbbc:getConversation(nConversationID)
 		local participants = {}
 		participants[fromUserID] = fromUsername
 		local messages = {}
-		for _, participant in pairs(_participants) do 
+		for _, participant in pairs(_participants) do
 			participants[tonumber(participant["userID"])] = participant["username"]
 		end
 		local result, _ = self:query("SELECT userid, username, message, FROM_UNIXTIME(time) as time FROM wcf1_conversation_message WHERE conversationID = ? ORDER BY time", nConversationID)
 		if result and #result > 0 then
-			for _, msg in ipairs(result) do 
+			for _, msg in ipairs(result) do
 				local message = {}
 				message["userID"] = tonumber(msg["userid"])
 				message["username"] = msg["username"]
@@ -353,7 +353,7 @@ function Cwbbc:getConversation(nConversationID)
 	end
 end
 
-function Cwbbc:replyConversation(nUID, nConversationID, sMessage, bAutoJoin) 
+function Cwbbc:replyConversation(nUID, nConversationID, sMessage, bAutoJoin)
 	if not self.hCon then self:message("Not connected to mysql server") return false end
 	assert(type(nUID) == "number", "Invalid number @ argument 1")
 	assert(type(nConversationID) == "number", "Invalid number @ argument 2")
@@ -393,15 +393,15 @@ function Cwbbc:newConversation(nUID, tnRecieverID, sSubject, sMessage)
 	assert(type(sMessage) == "string", "Invalid string @ argument 4")
 	local nParticipantCount = 0
 	local tParticipants = {}
-	if type(tnRecieverID) == "number" then 
+	if type(tnRecieverID) == "number" then
 		local rid = tnRecieverID
 		tnRecieverID = {}
 		table.insert(tnRecieverID, rid)
 	end
 	local sUsername = self:getUserName(tonumber(nUID))
 	local nTimestamp = getRealTime().timestamp
-	
-	for _, receiverID in ipairs(tnRecieverID) do 
+
+	for _, receiverID in ipairs(tnRecieverID) do
 		if receiverID ~= nil and tonumber(receiverID) ~= nil and tonumber(receiverID) ~= nUID then
 			local _receipient = {}
 			_receipient["userID"] = tostring(receiverID)
@@ -409,13 +409,14 @@ function Cwbbc:newConversation(nUID, tnRecieverID, sSubject, sMessage)
 			_receipient["username"] = self:getUserName(tonumber(receiverID))
 			table.insert(tParticipants, _receipient)
 		end
-	end
+    end
+
 	nParticipantCount = #tParticipants
 	self:query("START TRANSACTION;")
 	local result, _, conversationID = self:query("INSERT INTO wcf1_conversation (subject, time, userID, username, lastPostTime, lastPosterID, lastPoster, participants, participantSummary) VALUES (?,?,?,?,?,?,?,?,?)", sSubject, nTimestamp, nUID, sUsername, nTimestamp, nUID, sUsername, nParticipantCount, serialize(tParticipants))
 	if result and conversationID ~= nil and tonumber(conversationID) ~= nil then
 		self:query("INSERT INTO wcf1_conversation_to_user (conversationID, participantID, username, lastVisitTime) VALUES (?,?,?,?)", conversationID, nUID, sUsername, nTimestamp)
-		for receipientIndex, receipient in ipairs(tParticipants) do 
+		for receipientIndex, receipient in ipairs(tParticipants) do
 			self:query("INSERT INTO wcf1_conversation_to_user (conversationID, participantID, username) VALUES (?,?,?)", conversationID, receipient["userID"], receipient["username"])
 		end
 		local result, _, messageID = self:query("INSERT INTO wcf1_conversation_message (conversationID, userID, username, message, time, ipAddress) VALUES (?,?,?,?,?,?)", conversationID, nUID, sUsername, sMessage, nTimestamp, "::ffff:5de6:2a0e")
@@ -461,12 +462,12 @@ function Cwbbc:hideConversation(nForUID, nConversationID, toHidden)
 	local pCount = self:get("wcf1_conversation", "participants", "conversationID", nConversationID)
 	if ptable then
 		ptable = unserialize(ptable)
-		for i, p in ipairs(ptable) do 
+		for i, p in ipairs(ptable) do
 			if tonumber(p["userID"]) == nForUID then
-				local oldState = tonumber(p["hideConversation"]) 
+				local oldState = tonumber(p["hideConversation"])
 				ptable[i]["hideConversation"] = tostring(toHidden)
 				self:set("wcf1_conversation", "participantSummary", serialize(ptable), "conversationID", nConversationID)
-				if oldState == 2 then 
+				if oldState == 2 then
 					self:set("wcf1_conversation", "participants", tonumber(pCount)+1, "conversationID", nConversationID)
 				end
 				return (self:set("wcf1_conversation_to_user", "hideConversation", toHidden, "conversationID", nConversationID, "participantID", nForUID)~=false)
@@ -519,7 +520,7 @@ function Cwbbc:leaveConversation(nUID, nConversationID)
 	local pCount = self:get("wcf1_conversation", "participants", "conversationID", nConversationID)
 	if ptable ~= false then
 		ptable = unserialize(ptable)
-		for i, p in ipairs(ptable) do 
+		for i, p in ipairs(ptable) do
 			if tonumber(p["userID"]) == nUID then
 				local oldState = tonumber(p["hideConversation"])
 				ptable[i]["hideConversation"] = "2"
@@ -568,7 +569,8 @@ function Cwbbc:getDoubleSaltedHash(sPassword, sSalt)
         sSalt = self:getRandomSalt()
     end
 
-    return getSaltedHash(getSaltedHash(sPassword, sSalt), sSalt)
+    local doubleSaltedHash = self:getSaltedHash(self:getSaltedHash(sPassword, sSalt), sSalt)
+    return string.sub(doubleSaltedHash, 1, 60)
 end
 
 --Returns a simple salted bcrypt hash
@@ -585,7 +587,7 @@ end
 --Reference: https://github.com/WoltLab/WCF/blob/master/wcfsetup/install/files/lib/util/PasswordUtil.class.php#L202
 local blowfishCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./"
 function Cwbbc:getRandomSalt()
-    local salt = ""
+    local salt = "$2a$08$"
     for i = 1, 22 do
         local rnd = math.random(1, #blowfishCharacters)
         salt = ("%s%s"):format(salt, blowfishCharacters:sub(rnd, rnd))
@@ -610,7 +612,8 @@ function Cwbbc:debugOutput(tMessages)
     if not self.debug then return end
 
     for sIndicator, sMessage in pairs(tMessages) do
-       outputChatBox(("[iConnect][%s] %s"):format(tostring(sIndicator), tostring(sMessage)))
+        outputServerLog(("[iConnect][%s] %s"):format(tostring(sIndicator), tostring(sMessage)))
+        outputConsole(("[iConnect][%s] %s"):format(tostring(sIndicator), tostring(sMessage)))
     end
 end
 
@@ -636,10 +639,10 @@ end
 
 function Cwbbc:set(t, c, cV, w, wV, wO, wVO)   		--t = table | c = column | cV = columnValue | w = where | wV = whereValue | wO = whereOptional | wVO = whereValueOptional
     if wO ~= nil then
-		return dbExec(self.hCon, "UPDATE ?? SET ??=? WHERE ??=? AND ??=?", t, c, cV, w, wV, wO, wVO)
-	else
-		return dbExec(self.hCon, "UPDATE ?? SET ??=? WHERE ??=?", t, c, cV, w, wV)
-	end
+        return dbExec(self.hCon, "UPDATE ?? SET ??=? WHERE ??=? AND ??=?", t, c, cV, w, wV, wO, wVO)
+    else
+        return dbExec(self.hCon, "UPDATE ?? SET ??=? WHERE ??=?", t, c, cV, w, wV)
+    end
 end
 
 function Cwbbc:get(t, c, w, wV, wO, wVO)    --t = table | c = column | w = where | wV = whereValue | wO = whereOptional | wVO = whereValueOptional
@@ -662,7 +665,7 @@ end
 addEventHandler("onResourceStart", resourceRoot,
     function()
         if type(bcrypt_digest) ~= "function" then
-           outputDebugString("[iConnect] bcrypt module required to compare passwords!", 2)
+            outputDebugString("[iConnect] bcrypt module required to use login and register methods!", 2)
         end
 
         if type(unserialize) ~= "function"  or type(serialize) ~= "function" then
