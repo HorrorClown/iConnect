@@ -34,7 +34,6 @@ function Cwbbc:destructor()
     destroyElement(self.hCon)
 end
 
-
 --[[
     --//
     --|| Woltlab Community Framework
@@ -167,6 +166,15 @@ function Cwbbc:getLanguageItemText(sLanguageItem, nLanguageID)
 	return self:get("wcf1_language_item", "languageItemValue", "languageItem", sLanguageItem, "languageID", nLanguageID) or false
 end
 
+function Cwbbc:getUserStorage(nUID, sField)
+	if not self.hCon then self:message("Not connected to mysql server") return false end
+    assert(type(nUID) == "number", "Invalid number @ argument 1")
+    assert(type(sField) == "string", "Invalid string @ argument 2")
+    local result = self:query(("SELECT * FROM wcf1_user_storage WHERE userID = '%s' AND field = '%s'"):format(nUID, sField))
+	if result and result[1] then return result[1].fieldValue end
+	return false
+end
+
 --[[
     --//
     --|| Woltlab Burning Board
@@ -268,14 +276,63 @@ function Cwbbc:addUserToGroup(nUID, nGroupID)
     if not self.hCon then self:message("Not connected to mysql server") return false end
     assert(type(nUID) == "number", "Invalid number @ argument 1")
     assert(type(nGroupID) == "number", "Invalid number @ argument 2")
-    return self:insert("wcf1_user_to_group", "userID, groupID", "?,?", nUID, nGroupID)
+
+	if self:isGroupExists(nGroupID) and not self:isUserInGroup(nUID, nGroupID) then
+		local groupIDs = self:getUserStorage(nUID, "groupIDs")
+
+		if groupIDs then
+			local groupIDsArray = unserialize(groupIDs)
+			groupIDsArray[#groupIDsArray+1] = nGroupID
+			local newGroupIDsArray = serialize(groupIDsArray)
+
+			if newGroupIDsArray then
+				self:insert("wcf1_user_to_group", "userID, groupID", "?,?", nUID, nGroupID)
+				self:query(("UPDATE wcf1_user_storage SET fieldValue='%s' WHERE userID = '%s' AND field = 'groupIDs'"):format(newGroupIDsArray, nUID))
+				return true
+			end
+		else
+			local groupIDsArray = {[0] = 1, [1] = 3, [2] = nGroupID}
+			local newGroupIDsArray = serialize(groupIDsArray)
+
+			if newGroupIDsArray then
+				self:insert("wcf1_user_to_group", "userID, groupID", "?,?", nUID, nGroupID)
+				self:insert("wcf1_user_storage", "userID, field, fieldValue", "?,?,?", nUID, "groupIDs", newGroupIDsArray)
+				return true
+			end
+		end
+	end
+
+	return false
 end
 
 function Cwbbc:removeUserFromGroup(nUID, nGroupID)
     if not self.hCon then self:message("Not connected to mysql server") return false end
     assert(type(nUID) == "number", "Invalid number @ argument 1")
     assert(type(nGroupID) == "number", "Invalid number @ argument 2")
-    return (self:query(("DELETE FROM wcf1_user_to_group WHERE userID = '%s' AND groupID = '%s'"):format(nUID, nGroupID)) ~= false) or true
+
+	if self:isUserInGroup(nUID, nGroupID) then
+		local groupIDs = self:getUserStorage(nUID, "groupIDs")
+
+		if groupIDs then
+			local groupIDsArray = unserialize(groupIDs)
+
+			for k, v in pairs(groupIDsArray) do
+				if v == nGroupID then
+					groupIDsArray[k] = nil
+				end
+			end
+
+			local newGroupIDsArray = serialize(groupIDsArray)
+
+			if newGroupIDsArray then
+				self:query(("DELETE FROM wcf1_user_to_group WHERE userID = '%s' AND groupID = '%s'"):format(nUID, nGroupID))
+				self:query(("UPDATE wcf1_user_storage SET fieldValue='%s' WHERE userID = '%s' AND field = 'groupIDs'"):format(newGroupIDsArray, nUID))
+				return true
+			end
+		end
+	end
+
+    return false
 end
 
 --[[
@@ -605,7 +662,7 @@ end
  ]]
 
 function Cwbbc:message(sMessage)
-	outputDebugString(("[%s@%s]: %s"):format(self.sUser, self.sDBName, sMessage), 0, 255, 0, 255)
+	outputServerLog(("[%s@%s]: %s"):format(self.sUser, self.sDBName, sMessage))
 end
 
 function Cwbbc:debugOutput(tMessages)
@@ -625,7 +682,7 @@ end
 
 function Cwbbc:query(q, ...)
     local query = dbQuery(self.hCon, q, ...)
-    local result, qRows, qliID = dbPoll(query, 100)
+    local result, qRows, qliID = dbPoll(query, 200)
     if result == false then
         return false
     elseif result then
@@ -665,11 +722,11 @@ end
 addEventHandler("onResourceStart", resourceRoot,
     function()
         if type(bcrypt_digest) ~= "function" then
-            outputDebugString("[iConnect] bcrypt module required to use login and register methods!", 2)
+            outputServerLog("[iConnect] bcrypt module required to use login and register methods!")
         end
 
         if type(unserialize) ~= "function"  or type(serialize) ~= "function" then
-            outputDebugString("[iConnect] unserialize/serialize function required to use conversation methods!", 2)
+            outputServerLog("[iConnect] unserialize/serialize function required to use conversation methods!")
         end
     end
 )

@@ -138,3 +138,7 @@ end
 function isUserInConversation(nUID, nConversationID)
 	return wbb:isUserInConversation(nUID, nConversationID)
 end
+
+function getUserStorage(nUID, sField)
+	return wbb:getUserStorage(nUID, sField)
+end
