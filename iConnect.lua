@@ -644,7 +644,7 @@ end
 --Reference: https://github.com/WoltLab/WCF/blob/master/wcfsetup/install/files/lib/util/PasswordUtil.class.php#L202
 local blowfishCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./"
 function Cwbbc:getRandomSalt()
-    local salt = "$2a$08$"
+    local salt = ""
     for i = 1, 22 do
         local rnd = math.random(1, #blowfishCharacters)
         salt = ("%s%s"):format(salt, blowfishCharacters:sub(rnd, rnd))
@@ -718,6 +718,10 @@ end
     --|| Other informations on resource startup
     --\\
  ]]
+
+function bcrypt_digest(password, pwSalt) 
+    return passwordHash(password, "bcrypt", {salt=pwSalt})
+end
 
 addEventHandler("onResourceStart", resourceRoot,
     function()
