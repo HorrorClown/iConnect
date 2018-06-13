@@ -725,10 +725,6 @@ end
 
 addEventHandler("onResourceStart", resourceRoot,
     function()
-        if type(bcrypt_digest) ~= "function" then
-            outputServerLog("[iConnect] bcrypt module required to use login and register methods!")
-        end
-
         if type(unserialize) ~= "function"  or type(serialize) ~= "function" then
             outputServerLog("[iConnect] unserialize/serialize function required to use conversation methods!")
         end
