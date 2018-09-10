@@ -644,7 +644,7 @@ end
 --Reference: https://github.com/WoltLab/WCF/blob/master/wcfsetup/install/files/lib/util/PasswordUtil.class.php#L202
 local blowfishCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./"
 function Cwbbc:getRandomSalt()
-    local salt = "$2a$08$"
+    local salt = ""
     for i = 1, 22 do
         local rnd = math.random(1, #blowfishCharacters)
         salt = ("%s%s"):format(salt, blowfishCharacters:sub(rnd, rnd))
@@ -719,12 +719,12 @@ end
     --\\
  ]]
 
+function bcrypt_digest(password, pwSalt) 
+    return passwordHash(password, "bcrypt", {salt=pwSalt})
+end
+
 addEventHandler("onResourceStart", resourceRoot,
     function()
-        if type(bcrypt_digest) ~= "function" then
-            outputServerLog("[iConnect] bcrypt module required to use login and register methods!")
-        end
-
         if type(unserialize) ~= "function"  or type(serialize) ~= "function" then
             outputServerLog("[iConnect] unserialize/serialize function required to use conversation methods!")
         end

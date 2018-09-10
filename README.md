@@ -8,9 +8,4 @@ Ihr habt damit die Möglichkeit, euer Server mit eurem WBB4 Forum zu verbinden. 
 ###Installation
 Einfach die iConnect.lua und die serialize.lua in eure Resource hinzufügen und in die meta.xml eintragen. Falls benötigt, schreibt auch *&lt;oop&gt;true&lt;/oop&gt;* in die meta.xml.
 
-#####Wichtig:
-Um den Connector nutzen zu können, benötigt ihr das bcrypt Modul, da dies den Blowfish-Algorithmus zur Verfügung stellt, welcher in MTA leider (noch) nicht enthalten ist.
-Windows: https://github.com/pzduniak/ml_bcrypt // https://github.com/Jusonex/mtasa-bcrypt
-Linux: http://www.jusonex.net/public/mta/ml_bcrypt.so
-An dieser Stelle ein Dankeschön an @Jusonex: :)
-Quelle: Other Hashing Algorithmen
+
